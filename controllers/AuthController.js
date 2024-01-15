@@ -26,7 +26,7 @@ export const onBoardUser = async (req, res, next) => {
         }
         const prisma = getPrismaInstance();
         await prisma.user.create({
-            data: {id:7327, email, name, about, profileImage, status:"true", NewUser:false },
+            data: { email, name, about, profileImage, status:"true", NewUser:false },
         });
         return res.json({ msg: "Success", status: true });
     } catch (error) {
