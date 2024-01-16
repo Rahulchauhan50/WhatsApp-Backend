@@ -15,4 +15,18 @@ model User {
   status String
   about String
   NewUser Boolean 
+  sentMessage Messages[] @relation("sentMessage")
+  recievedMessages Messages[] @relation("recievedMessages")
+}
+
+model Messages {
+  id String @id @map("_id") @default(auto()) @db.ObjectId()
+  sender User @relation("sentMessage", fields: [senderId], references: [id])
+  reciever User @relation("recievedMessages", fields: [recieverId], references: [id])
+  senderId String @db.ObjectId() 
+  recieverId String @db.ObjectId()
+  type String @default("text")
+  message String
+  messageStatus String @default("sent")
+  createAt DateTime @default(now())
 }
