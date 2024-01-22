@@ -10,7 +10,10 @@ const port = process.env.PORT || 5000
 const app = express();
 
 app.use(cors());
-app.use(express.json())
+app.use(express.json());
+
+app.use("/uploads/images", express.static("uploads/images"));
+app.use("/uploads/recordings", express.static("uploads/recordings"));
 
 app.use("/api/auth",AuthRoutes)
 app.use("/api/messages",MessageRoutes)
@@ -31,16 +34,14 @@ global.onlineUsers = new Map();
 io.on("connection", (socket)=>{
     global.chatShocket = socket;
     socket.on("add-user", (userId)=>{
+        // console.log(userId)
         onlineUsers.set(userId, socket.id);
+        // console.log(onlineUsers)
     })
-    socket.on("send-msg", (data) => {
-        const sendUserSocket = onlineUsers.get(data.to);
+    socket.on("send-msg", async (data) => {
+        const sendUserSocket = await onlineUsers.get(data.recieverId);
         if (sendUserSocket) {
-            socket.to(sendUserSocket).emit("msg-recieve", {
-                to:data.to,
-                from: data.from,
-                message: data.message,
-            });
+            socket.to(sendUserSocket).emit("msg-recieve", data);
         }
         onlineUsers.set(data.to, socket.id);
     })
