@@ -118,10 +118,121 @@ export const addAudioMessage = async (req, res, next) => {
   }
 };
 
+// export const getInitialContactSwitchMessages = async (req, res, next) => {
+//   try {
+//     const userId = req.params.from
+//     const prisma = getPrismaInstance();
+//     const user = await prisma.user.findUnique({
+//       where: { id: userId },
+//       include: {
+//         sentMessages: {
+//           include: {
+//             reciever: true,
+//             sender: true,
+//           },
+//           orderBy: {
+//             createAt: "desc",
+//           },
+//         },
+//         recievedMessages: {
+//           include: {
+//             reciever: true,
+//             sender: true,
+//           },
+//           orderBy: {
+//             createAt: "desc",
+//           },
+//         },
+//       },
+//     });
+    
+//     const messages = [...user.sentMessages, ...user.recievedMessages];
+//     messages.sort((a, b) => (b.createAt && a.createAt ? b.createAt.getTime() - a.createAt.getTime() : 0));
+    
+//     const users = new Map();
+//     const messageStatusChange = [];
+//     messages.forEach((msg) => {
+//       const isSender = msg.senderId === userId;
+//       const calculated = isSender ? msg.recieverId : msg.senderId;
+//       if (msg.messageStatus === "sent") {
+//         messageStatusChange.push(msg.id);
+//       }
+//         // Handle the case where the user doesn't exist
+//       const {
+//         id,
+//         type,
+//         message,
+//         messageStatus,
+//         createAt,
+//         senderId,
+//         recieverId,
+//       } = msg;
+      
+     
+
+//       if (!users.get(calculated)) {
+        
+//         let user = {
+//           messageId: id,
+//           type,
+//           message,
+//           messageStatus,
+//           createAt,
+//           senderId,
+//           recieverId,
+//         };
+//         if(isSender){
+//             user = {
+//                 ...user,
+//                 ...msg.reciever,
+//                 totalUnreadMessages:0
+//             }
+//         }
+//         else{
+//           user = {
+//             ...user,
+//             ...msg.sender,
+//             totalUnreadMessages:messageStatus!=="read" ?1 :0
+//           }
+//             // return res.status(200).json({users,"name":"rahul"});
+//         }
+//         users.set(calculated,{...user})
+//       } 
+//       else if (messageStatus !== "read" && !isSender) {
+
+//         const user = users.get(calculated);
+//         users.set(calculated, {
+//           ...user,
+//           totalUnreadMessages: user.totalUnreadMessages + 1,
+//         });
+//       }
+//     });
+
+   
+
+//     if(messageStatusChange.length){
+//         await prisma.messages.updateMany({
+//             where: { id: { in: messageStatusChange } },
+//             data: { messageStatus: "delivered" },
+//           });
+//     }
+    
+
+//     return res.status(200).json({
+//         users:Array.from(users.values),
+//         onlineUsers:Array.from(onlineUsers.keys())
+//     })
+//   } catch (error) {
+//     next(error)
+//   }
+// };
+
 export const getInitialContactSwitchMessages = async (req, res, next) => {
   try {
-    const userId = parseInt(req.params.form);
+    const userId = req.params.from;
     const prisma = getPrismaInstance();
+
+    // Fetch user and messages
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -145,69 +256,53 @@ export const getInitialContactSwitchMessages = async (req, res, next) => {
         },
       },
     });
+
+    // Combine and sort messages
     const messages = [...user.sentMessages, ...user.recievedMessages];
     messages.sort((a, b) => b.createAt.getTime() - a.createAt.getTime());
-    const users = new Map();
-    const messageStatusChange = [];
+
+    // Create a map to track users based on their last message
+    const usersMap = new Map();
+
+    // Create a map to track unread messages by other users
+    const unreadMessagesMap = new Map();
+
+    // Process messages and populate usersMap and unreadMessagesMap
     messages.forEach((msg) => {
       const isSender = msg.senderId === userId;
-      const calculated = isSender ? msg.recieverId : msg.senderId;
-      if (msg.messageStatus === "sent") {
-        messageStatusChange.push(msg.id);
-      }
-      if (!users.get(calculated)) {
-        const {
-          id,
-          type,
-          message,
-          messageStatus,
-          createAt,
-          senderId,
-          recieverId,
-        } = msg;
-        let user = {
-          messageId: id,
-          type,
-          message,
-          messageStatus,
-          createAt,
-          senderId,
-          recieverId,
-        };
-        if(isSender){
-            user = {
-                ...user,
-                ...msg.reciever,
-                totalUnreadMessages:0
-            }
-        }else{
-            user = {
-                ...user,
-                ...msg.senderId,
-                totalUnreadMessages:messageStatus!=="read" ?1 :0
-            }
-        }
-        users.set(calculated,{...user})
-      } else if (msg.messageStatus !== "read" && !isSender) {
-        const user = users.get(calculated);
-        users.set(calculated, {
-          ...user,
-          totalUnreadMessages: user.totalUnreadMessages + 1,
+      const otherUserId = isSender ? msg.recieverId : msg.senderId;
+
+      if (!usersMap.has(otherUserId)) {
+        usersMap.set(otherUserId, {
+          id: otherUserId,
+          lastMessage: msg,
         });
       }
+
+      if (!isSender && msg.messageStatus !== "read") {
+        const unreadCount = unreadMessagesMap.get(otherUserId) || 0;
+        unreadMessagesMap.set(otherUserId, unreadCount + 1);
+      }
     });
-    if(messageStatusChange.length){
-        await prisma.messages.updateMany({
-            where: { id: { in: messageStatusChange } },
-            data: { messageStatus: "delivered" },
-          });
-    }
+
+    // Convert map values to an array and sort based on the last message timestamp
+    const sortedUsers = Array.from(usersMap.values()).sort(
+      (a, b) => b.lastMessage.createAt.getTime() - a.lastMessage.createAt.getTime()
+    );
+
+    // Include the unread message count for each sorted user
+    const usersWithUnreadCount = sortedUsers.map((sortedUser) => ({
+      ...sortedUser,
+      unreadMessageCount: unreadMessagesMap.get(sortedUser.id) || 0,
+    }));
 
     return res.status(200).json({
-        users:Array.from(users.values),
-        onlineUsers:Array.from(onlineUsers.keys())
-    })
+      users: usersWithUnreadCount,
+      onlineUsers: Array.from(onlineUsers.keys()),
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
 };
+
+
