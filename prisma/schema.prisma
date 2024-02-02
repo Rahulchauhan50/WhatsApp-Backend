@@ -27,7 +27,9 @@ model Messages {
   reciever User @relation("recievedMessages", fields: [recieverId], references: [id])
   recieverId String @db.ObjectId()
   type String @default("text")
-  message Bytes?  // Use the Bytes type to store binary data (image)
+  message String? // Use the Bytes type to store binary data (image)
+  imagemessage Bytes?  // Use the Bytes type to store binary data (image)
+  audiomessage Bytes?  // Use the Bytes type to store binary data (image)
   messageStatus String @default("sent")
   createdAt DateTime @default(now())
 }

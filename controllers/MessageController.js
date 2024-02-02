@@ -10,11 +10,10 @@ export const addMessage = async (req, res, next) => {
     const prisma = getPrismaInstance();
     const { message, from, to } = req.body;
     const getUser = onlineUsers.get(to);
-    const messageData = Buffer.from(message, 'base64');
     if (message && from && to) {
       const newMessage = await prisma.messages.create({
         data: {
-          message:messageData,
+          message,
           sender: { connect: { id: from } },
           reciever: { connect: { id: to } },
           messageStatus: getUser ? "delivered" : "sent",
@@ -58,7 +57,7 @@ export const getMessages = async (req, res, next) => {
         senderId: message.senderId,
         recieverId: message.recieverId,
         type: message.type,
-        message: message.type === "image" ? message.message.toString('base64') : message.message,
+        message: message.type === "image" ? message.imagemessage.toString('base64') : message.message,
         messageStatus: message.messageStatus,
         createdAt: message.createdAt,
       };
@@ -83,9 +82,9 @@ export const addImageMessage = async (req, res, next) => {
     const imageBuffer = await fs.readFile(req.file.path);
 
     // Store the image data in the database
-    const message = await prisma.messages.create({
+    const imagemessage = await prisma.messages.create({
       data: {
-        message: Buffer.from(imageBuffer), // Convert Buffer to Prisma Bytes
+        imagemessage: Buffer.from(imageBuffer), // Convert Buffer to Prisma Bytes
         sender: {
           connect: { id: from },
         },
@@ -99,7 +98,7 @@ export const addImageMessage = async (req, res, next) => {
     // Remove the temporary file
     await fs.unlink(req.file.path);
 
-    return res.status(201).json({ message });
+    return res.status(201).json({ imagemessage });
   } catch (error) {
     next(error);
   }
@@ -164,7 +163,9 @@ export const getInitialContactSwitchMessages = async (req, res, next) => {
 
     // Combine and sort messages
     const messages = [...user.sentMessages, ...user.recievedMessages];
-    messages.sort((a, b) => b.createAt.getTime() - a.createAt.getTime());
+    messages.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    // return res.json({messages})
 
     // Create a map to track users based on their last message
     const usersMap = new Map();
@@ -192,7 +193,7 @@ export const getInitialContactSwitchMessages = async (req, res, next) => {
 
     // Convert map values to an array and sort based on the last message timestamp
     const sortedUsers = Array.from(usersMap.values()).sort(
-      (a, b) => b.lastMessage.createAt.getTime() - a.lastMessage.createAt.getTime()
+      (a, b) => b.lastMessage.createdAt.getTime() - a.lastMessage.createdAt.getTime()
     );
 
     // Include the unread message count for each sorted user
