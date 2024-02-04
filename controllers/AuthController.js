@@ -17,7 +17,7 @@ export const checkUser = async(req,res,next) => {
     } catch (error) {
         next(error);
     }
-}
+} 
 
 export const onBoardUser = async (req, res, next) => {
     try {

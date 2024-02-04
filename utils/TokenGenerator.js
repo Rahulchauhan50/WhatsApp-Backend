@@ -14,7 +14,7 @@ var ErrorCode; // Define enum for error codes
 function RndNum(a, b) {
   // Function to return random number within given range
   return Math.ceil((a + (b - a)) * Math.random());
-}
+} 
 // Function to generate random 16 character string
 function makeRandomIv() {
   var str = "0123456789abcdefghijklmnopqrstuvwxyz";

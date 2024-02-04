@@ -8,4 +8,4 @@ router.post('/onboard-user',onBoardUser)
 router.get('/get-contacts',getAllUsers)
 router.get('/generate-token/:userId',generateToken)
 
-export default router
+export default router 

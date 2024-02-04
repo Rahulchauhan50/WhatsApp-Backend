@@ -33,3 +33,4 @@ model Messages {
   messageStatus String @default("sent")
   createdAt DateTime @default(now())
 }
+  

@@ -94,7 +94,7 @@ export const addImageMessage = async (req, res, next) => {
         type: 'image',
       },
     });
-  
+   
     await fs.unlink(req.file.path);
 
     return res.status(201).json({ imagemessage });

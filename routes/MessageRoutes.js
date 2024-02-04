@@ -14,4 +14,4 @@ router.post("/add-image-message",UplaodImage.single('image'), addImageMessage)
 router.post("/add-audio-message",UplaodAudio.single('audio'), addAudioMessage)
 router.get("/get-intial-contacts/:from",getInitialContactSwitchMessages)
 
-export default router
+export default router 
